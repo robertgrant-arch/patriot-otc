@@ -22,6 +22,9 @@ export default function Header() {
 
         {/* Desktop nav links */}
         <div className="hidden md:flex gap-6 text-sm font-medium text-gray-700">
+          <Link href="/balance" className="text-patriot-red font-semibold hover:text-red-700 transition-colors">
+            Check My Balance
+          </Link>
           <Link href="/#how-it-works" className="hover:text-patriot-blue transition-colors">
             How It Works
           </Link>
@@ -43,9 +46,9 @@ export default function Header() {
           <Link
             href="/signup"
             className="bg-patriot-red hover:bg-red-800 text-white px-4 py-2 rounded-md
-                       text-sm font-semibold transition-colors
-                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-                       focus-visible:outline-patriot-red"
+                        text-sm font-semibold transition-colors
+                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+                        focus-visible:outline-patriot-red"
           >
             Get Started
           </Link>
