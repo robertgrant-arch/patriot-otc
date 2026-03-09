@@ -1,135 +1,121 @@
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 
 // =============================================================================
-// Balance Check API Route
+// Balance Check API Route — Security-hardened
 // =============================================================================
-// This route handles OTC card balance lookups by routing to the correct
-// platform provider based on the carrier.
-//
-// CARRIER -> PLATFORM MAPPING:
-//   Humana, Aetna, UHC    -> InComm Healthcare API (developer.incomm.com)
-//   Anthem, Wellcare       -> NationsBenefits API (nationsbenefits.com)
-//
-// TODO: Replace mock data with real API integrations once partnerships
-//       are established with InComm Healthcare and NationsBenefits.
+// Carrier -> Platform: Humana/Aetna/UHC -> InComm | Anthem/Wellcare -> NationsBenefits
+// TODO: Replace mock data once API partnerships are established.
 // =============================================================================
 
-interface BalanceRequest {
-  cardNumber: string
-  carrier: string
-}
+const VALID_CARRIERS = new Set(['humana', 'aetna', 'uhc', 'anthem', 'wellcare'])
 
-// Platform routing based on carrier
 const CARRIER_PLATFORM: Record<string, string> = {
-  humana: 'incomm',
-  aetna: 'incomm',
-  uhc: 'incomm',
-  anthem: 'nationsbenefits',
-  wellcare: 'nationsbenefits',
+  humana: 'incomm', aetna: 'incomm', uhc: 'incomm',
+  anthem: 'nationsbenefits', wellcare: 'nationsbenefits',
 }
 
 const CARRIER_NAMES: Record<string, string> = {
-  humana: 'Humana',
-  aetna: 'Aetna',
-  uhc: 'UnitedHealthcare',
-  anthem: 'Anthem',
-  wellcare: 'Wellcare',
+  humana: 'Humana', aetna: 'Aetna', uhc: 'UnitedHealthcare',
+  anthem: 'Anthem', wellcare: 'Wellcare',
 }
 
-// ---------------------------------------------------------------------------
-// TODO: Implement real InComm Healthcare API integration
-// Docs: https://developer.incomm.com/apis
-// API Suite: Card & Wallet Management, Member Information, Transactions
-// Auth: OAuth2 (requires partnership agreement)
-// Endpoints needed:
-//   - POST /auth/token (get access token)
-//   - GET /cards/{cardId}/wallets (get wallet balances)
-//   - GET /cards/{cardId}/transactions (transaction history)
-// ---------------------------------------------------------------------------
-async function queryInComm(cardNumber: string, carrier: string) {
-  // MOCK RESPONSE - Replace with real InComm API call
+// --- Rate limiting (in-memory, per-IP, resets on cold start) ---
+const rateMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 10
+const RATE_WINDOW_MS = 60_000
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateMap.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS })
+    return false
+  }
+  entry.count++
+  return entry.count > RATE_LIMIT
+}
+
+// --- Input validation ---
+function sanitizeCardNumber(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length < 13 || digits.length > 19) return null
+  return digits
+}
+
+function sanitizeCarrier(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const lower = raw.toLowerCase().trim()
+  return VALID_CARRIERS.has(lower) ? lower : null
+}
+
+// --- Mock platform queries (replace with real APIs) ---
+function queryInComm(cardLast4: string, carrier: string) {
   return {
-    cardLast4: cardNumber.slice(-4),
-    carrier: CARRIER_NAMES[carrier] || carrier,
+    cardLast4,
+    carrier: CARRIER_NAMES[carrier],
     planName: `${CARRIER_NAMES[carrier]} Medicare Advantage (HMO)`,
     wallets: [
-      {
-        name: 'OTC Products',
-        balance: 65.00,
-        spent: 35.00,
-        period: 'Monthly',
-        resetsOn: 'Apr 1, 2026',
-      },
-      {
-        name: 'Healthy Foods',
-        balance: 40.00,
-        spent: 60.00,
-        period: 'Monthly',
-        resetsOn: 'Apr 1, 2026',
-      },
+      { name: 'OTC Products', balance: 65, spent: 35, period: 'Monthly', resetsOn: 'Apr 1, 2026' },
+      { name: 'Healthy Foods', balance: 40, spent: 60, period: 'Monthly', resetsOn: 'Apr 1, 2026' },
     ],
-    totalAvailable: 105.00,
+    totalAvailable: 105,
     lastUpdated: new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }),
   }
 }
 
-// ---------------------------------------------------------------------------
-// TODO: Implement real NationsBenefits API integration
-// Portal: https://MyBenefits.NationsBenefits.com
-// Platform: Benefits Pro Portal & App
-// Features: Live balance check, transaction history, card activation
-// Auth: Requires formal partnership agreement
-// Endpoints needed:
-//   - POST /auth/login (authenticate)
-//   - GET /members/{memberId}/balance (get balances)
-//   - GET /members/{memberId}/transactions (transaction history)
-// ---------------------------------------------------------------------------
-async function queryNationsBenefits(cardNumber: string, carrier: string) {
-  // MOCK RESPONSE - Replace with real NationsBenefits API call
+function queryNationsBenefits(cardLast4: string, carrier: string) {
   return {
-    cardLast4: cardNumber.slice(-4),
-    carrier: CARRIER_NAMES[carrier] || carrier,
+    cardLast4,
+    carrier: CARRIER_NAMES[carrier],
     planName: `${CARRIER_NAMES[carrier]} Medicare Advantage (PPO)`,
     wallets: [
-      {
-        name: 'OTC Products',
-        balance: 50.00,
-        spent: 25.00,
-        period: 'Quarterly',
-        resetsOn: 'Jul 1, 2026',
-      },
+      { name: 'OTC Products', balance: 50, spent: 25, period: 'Quarterly', resetsOn: 'Jul 1, 2026' },
     ],
-    totalAvailable: 50.00,
+    totalAvailable: 50,
     lastUpdated: new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }),
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const body: BalanceRequest = await request.json()
-    const { cardNumber, carrier } = body
-
-    if (!cardNumber || !carrier) {
+    // Rate limiting
+    const headersList = await headers()
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    if (isRateLimited(ip)) {
       return NextResponse.json(
-        { error: 'Card number and carrier are required.' },
+        { error: 'Too many requests. Please wait a minute and try again.' },
+        { status: 429 }
+      )
+    }
+
+    const body = await request.json()
+
+    // Validate & sanitize inputs
+    const cardNumber = sanitizeCardNumber(body.cardNumber)
+    const carrier = sanitizeCarrier(body.carrier)
+
+    if (!cardNumber) {
+      return NextResponse.json(
+        { error: 'Please enter a valid card number (13-19 digits).' },
         { status: 400 }
       )
     }
+    if (!carrier) {
+      return NextResponse.json(
+        { error: 'Please select a valid carrier.' },
+        { status: 400 }
+      )
+    }
+
+    // Extract only last 4 digits — never log or store full card number
+    const cardLast4 = cardNumber.slice(-4)
 
     const platform = CARRIER_PLATFORM[carrier]
-    if (!platform) {
-      return NextResponse.json(
-        { error: 'Unsupported carrier. Please select a valid carrier.' },
-        { status: 400 }
-      )
-    }
-
-    let result
-    if (platform === 'incomm') {
-      result = await queryInComm(cardNumber, carrier)
-    } else {
-      result = await queryNationsBenefits(cardNumber, carrier)
-    }
+    const result = platform === 'incomm'
+      ? queryInComm(cardLast4, carrier)
+      : queryNationsBenefits(cardLast4, carrier)
 
     return NextResponse.json(result)
   } catch {
