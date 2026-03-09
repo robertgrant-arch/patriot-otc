@@ -2,22 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Fix #16: Senior-friendly base — 18px instead of 16px */
+html {
+  font-size: 18px;
+  scroll-behavior: smooth;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  background: #ffffff;
+  color: #111827;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Fix #15: Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (forced-colors: active) {
+  .btn-primary {
+    forced-color-adjust: none;
+  }
+}
+
+/* Fix (a11y): Minimum 44px touch targets for senior users */
+button,
+a,
+[role="button"] {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 @layer utilities {

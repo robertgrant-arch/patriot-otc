@@ -1,19 +1,28 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss'
 
+// Fix #12: Brand tokens, senior font sizes, data file scanning
 const config: Config = {
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    './app/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './data/**/*.{ts,tsx}',
   ],
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        patriot: {
+          red:   '#B91C1C',
+          blue:  '#1E3A5F',
+          white: '#FFFFFF',
+        },
+      },
+      fontSize: {
+        'senior-body': ['1.125rem', { lineHeight: '1.75' }],
+        'senior-lg':   ['1.25rem',  { lineHeight: '1.75' }],
       },
     },
   },
   plugins: [],
-};
-export default config;
+}
+
+export default config
