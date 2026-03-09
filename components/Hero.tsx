@@ -1,5 +1,5 @@
-// Server Component — no 'use client' needed
-import Link from 'next/link'
+// Server Component — HeroButtons is the only client island
+import HeroButtons from './HeroButtons'
 
 export default function Hero() {
   return (
@@ -20,32 +20,13 @@ export default function Hero() {
         </h1>
         <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto leading-relaxed">
           Millions of seniors have unused OTC credits every month. Use yours to get vitamins,
-          pain relief, dental care, and more — delivered free to your door.
+          pain relief, dental care, and more &mdash; delivered free to your door.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            href="/signup"
-            className="bg-patriot-red hover:bg-red-800 text-white font-bold py-4 px-8
-                       rounded-xl text-lg transition-colors
-                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-                       focus-visible:outline-white"
-          >
-            Check My Benefits — Free
-          </Link>
-          <Link
-            href="/catalog"
-            className="bg-white text-patriot-blue hover:bg-blue-50 font-bold py-4 px-8
-                       rounded-xl text-lg transition-colors
-                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-                       focus-visible:outline-white"
-          >
-            Browse Products
-          </Link>
-        </div>
+        <HeroButtons />
         <p className="mt-6 text-blue-200 text-sm">
-          <span aria-hidden="true">✓</span> No cost to you &nbsp;
-          <span aria-hidden="true">✓</span> Works with Humana, Aetna, UHC, Anthem &amp; Wellcare &nbsp;
-          <span aria-hidden="true">✓</span> Free shipping
+          <span aria-hidden="true">&check;</span> No cost to you &nbsp;
+          <span aria-hidden="true">&check;</span> Works with Humana, Aetna, UHC, Anthem &amp; Wellcare &nbsp;
+          <span aria-hidden="true">&check;</span> Free shipping
         </p>
       </div>
     </section>
