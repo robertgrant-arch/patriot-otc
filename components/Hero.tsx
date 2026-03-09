@@ -24,9 +24,9 @@ export default function Hero() {
         </p>
         <HeroButtons />
         <p className="mt-6 text-blue-200 text-sm">
-          <span aria-hidden="true">&check;</span> No cost to you &nbsp;
-          <span aria-hidden="true">&check;</span> Works with Humana, Aetna, UHC, Anthem &amp; Wellcare &nbsp;
-          <span aria-hidden="true">&check;</span> Free shipping
+          <span aria-hidden="true">{"\u2713"}</span> No cost to you{" "}
+          <span aria-hidden="true">{"\u2713"}</span> Works with Humana, Aetna, UHC, Anthem &amp; Wellcare{" "}
+          <span aria-hidden="true">{"\u2713"}</span> Free shipping
         </p>
       </div>
     </section>
